@@ -4,12 +4,7 @@
  */
 package Modelo;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -17,7 +12,7 @@ import java.util.ArrayList;
  * @author FelipeNuevo
  */
 public class GestorArchivo {
-    private final String RUTA_ARCHIVO = "estudiantes.txt";
+    private final String RUTA = "estudiantes.txt";
     private ArrayList<Estudiante> listaEstudiantes;
 
     public GestorArchivo() {
@@ -25,22 +20,38 @@ public class GestorArchivo {
         cargarDatos();
     }
 
-    public ArrayList<Estudiante> getListaEstudiantes() { return listaEstudiantes; }
+    // El UML exige persistencia: este método guarda todo el ArrayList en el TXT
+    public void guardarDatos() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(RUTA))) {
+            for (Estudiante e : listaEstudiantes) {
+                pw.println(e.getCodigo() + "," + e.getNombre() + "," + 
+                           e.getNotaDesarrollo() + "," + e.getNotaMatematica());
+            }
+        } catch (IOException ex) {
+            System.err.println("Error de persistencia: " + ex.getMessage());
+        }
+    }
+
+    private void cargarDatos() {
+        File f = new File(RUTA);
+        if (!f.exists()) return;
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] d = linea.split(",");
+                listaEstudiantes.add(new Estudiante(Integer.parseInt(d[0]), d[1], 
+                                     Double.parseDouble(d[2]), Double.parseDouble(d[3])));
+            }
+        } catch (Exception ex) { System.err.println("Error al cargar."); }
+    }
 
     public void agregarEstudiante(Estudiante e) {
         listaEstudiantes.add(e);
         guardarDatos();
     }
 
-    public Estudiante buscarEstudiante(int codigo) {
-        for (Estudiante e : listaEstudiantes) {
-            if (e.getCodigo() == codigo) return e;
-        }
-        return null;
-    }
-
-    public boolean eliminarEstudiante(int codigo) {
-        Estudiante e = buscarEstudiante(codigo);
+    public boolean eliminarEstudiante(int cod) {
+        Estudiante e = buscarEstudiante(cod);
         if (e != null) {
             listaEstudiantes.remove(e);
             guardarDatos();
@@ -49,32 +60,14 @@ public class GestorArchivo {
         return false;
     }
 
-    public void guardarDatos() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(RUTA_ARCHIVO))) {
-            for (Estudiante e : listaEstudiantes) {
-                pw.println(e.toString());
-            }
-        } catch (IOException ex) {
-            System.err.println("Error al guardar: " + ex.getMessage());
+    public Estudiante buscarEstudiante(int cod) {
+        for (Estudiante e : listaEstudiantes) {
+            if (e.getCodigo() == cod) return e;
         }
+        return null;
     }
 
-    public void cargarDatos() {
-        File archivo = new File(RUTA_ARCHIVO);
-        if (!archivo.exists()) return;
-        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-            String linea;
-            listaEstudiantes.clear();
-            while ((linea = br.readLine()) != null) {
-                String[] d = linea.split(",");
-                if (d.length == 4) {
-                    listaEstudiantes.add(new Estudiante(
-                        Integer.parseInt(d[0]), d[1], 
-                        Double.parseDouble(d[2]), Double.parseDouble(d[3])));
-                }
-            }
-        } catch (Exception ex) {
-            System.err.println("Error al cargar datos.");
-        }
+    public ArrayList<Estudiante> getListaEstudiantes() {
+        return listaEstudiantes;
     }
 }

@@ -8,7 +8,17 @@ import Modelo.Estudiante;
 import Modelo.GestorArchivo;
 import Vista.Vista;
 import Modelo.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.event.*;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -21,7 +31,7 @@ public class Controlador implements ActionListener {
     public Controlador(Vista vista, GestorArchivo gestor) {
         this.vista = vista;
         this.gestor = gestor;
-        // Vincular botones
+        // Asignación de eventos
         this.vista.btnRegistrar.addActionListener(this);
         this.vista.btnConsultar.addActionListener(this);
         this.vista.btnActualizar.addActionListener(this);
@@ -30,131 +40,108 @@ public class Controlador implements ActionListener {
         this.vista.btnLimpiar.addActionListener(this);
     }
 
-    public void inicio() {
+    public void iniciar() {
         vista.setVisible(true);
-        reporteFinal();
+        actualizarTablaPrincipal();
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
             if (e.getSource() == vista.btnRegistrar) registrar();
-            if (e.getSource() == vista.btnConsultar) consultar();
-            if (e.getSource() == vista.btnActualizar) actualizar();
-            if (e.getSource() == vista.btnEliminar) borrar();
-            if (e.getSource() == vista.btnReporte) reporteFinal();
-            if (e.getSource() == vista.btnLimpiar) limpiar();
-        } catch (NumberFormatException ex) {
-            vista.mostrarMensaje("ERROR: Ingrese solo números en Código y Notas.");
+            else if (e.getSource() == vista.btnConsultar) consultar();
+            else if (e.getSource() == vista.btnActualizar) actualizar();
+            else if (e.getSource() == vista.btnEliminar) eliminar();
+            else if (e.getSource() == vista.btnReporte) mostrarVentanaReporte();
+            else if (e.getSource() == vista.btnLimpiar) limpiar();
         } catch (Exception ex) {
-            vista.mostrarMensaje("Error inesperado: " + ex.getMessage());
+            JOptionPane.showMessageDialog(vista, "Error en los datos.");
         }
     }
 
-    public void registrar() {
-        // RESTRICCIÓN 1: Código > 21000
-        int cod = vista.pedirCodigo();
-        if (cod <= 21000) {
-            vista.mostrarMensaje("RESTRICCIÓN: El código debe ser superior a 21000.");
-            return;
-        }
-
-        // Validación: No duplicados
-        if (gestor.buscarEstudiante(cod) != null) {
-            vista.mostrarMensaje("El estudiante con código " + cod + " ya existe.");
-            return;
-        }
-
-        String nom = vista.pedirNombre();
-        if (nom.isEmpty()) {
-            vista.mostrarMensaje("El nombre no puede estar vacío.");
-            return;
-        }
-
-        // RESTRICCIÓN 2: Notas entre 0 y 5
-        double nDes = vista.pedirNota("Desarrollo");
-        double nMat = vista.pedirNota("Matematica");
-
-        if (nDes < 0 || nDes > 5 || nMat < 0 || nMat > 5) {
-            vista.mostrarMensaje("RESTRICCIÓN: Las notas deben estar entre 0.0 y 5.0");
-            return;
-        }
-
-        gestor.agregarEstudiante(new Estudiante(cod, nom, nDes, nMat));
-        reporteFinal();
-        vista.mostrarMensaje("Estudiante registrado exitosamente.");
+    private void registrar() {
+        int cod = Integer.parseInt(vista.txtCodigo.getText());
+        if (cod <= 21000) { JOptionPane.showMessageDialog(vista, "Código inválido (>21000)"); return; }
+        double n1 = Double.parseDouble(vista.txtDesarrollo.getText());
+        double n2 = Double.parseDouble(vista.txtMatematica.getText());
+        
+        gestor.agregarEstudiante(new Estudiante(cod, vista.txtNombre.getText(), n1, n2));
+        actualizarTablaPrincipal();
         limpiar();
     }
 
-    public void consultar() {
-        int cod = vista.pedirCodigoBusqueda();
-        if (cod == -1) return;
-
+    private void consultar() {
+        int cod = vista.pedirDato("CONSULTA", "Ingrese el código a buscar:");
         Estudiante est = gestor.buscarEstudiante(cod);
         if (est != null) {
-            vista.mostrarEstudiante(
-                est.getRol(), est.getCodigo(), est.getNombre(),
-                est.getNotaDesarrollo(), est.getNotaMatematica(),
-                est.calcularDefinitiva(), est.obtenerEstadoAprobacion()
-            );
-        } else {
-            vista.mostrarMensaje("Estudiante no encontrado.");
-        }
+            JOptionPane.showMessageDialog(vista, "Estudiante: " + est.getNombre() + "\nDefinitiva: " + est.calcularDefinitiva());
+        } else JOptionPane.showMessageDialog(vista, "No encontrado.");
     }
 
-    public void actualizar() {
-        int cod = vista.pedirCodigo();
+    private void actualizar() {
+        int cod = Integer.parseInt(vista.txtCodigo.getText());
         Estudiante est = gestor.buscarEstudiante(cod);
-        
         if (est != null) {
-            double nDes = vista.pedirNota("Desarrollo");
-            double nMat = vista.pedirNota("Matematica");
-            
-            if (nDes < 0 || nDes > 5 || nMat < 0 || nMat > 5) {
-                vista.mostrarMensaje("Notas inválidas (0-5).");
-                return;
-            }
-            
-            est.setNombre(vista.pedirNombre());
-            est.setNotaDesarrollo(nDes);
-            est.setNotaMatematica(nMat);
+            est.setNombre(vista.txtNombre.getText());
+            est.setNotaDesarrollo(Double.parseDouble(vista.txtDesarrollo.getText()));
+            est.setNotaMatematica(Double.parseDouble(vista.txtMatematica.getText()));
             gestor.guardarDatos();
-            reporteFinal();
-            vista.mostrarMensaje("Datos actualizados.");
-        } else {
-            vista.mostrarMensaje("Para actualizar, primero ingrese un código existente en el campo Código.");
+            actualizarTablaPrincipal();
+            JOptionPane.showMessageDialog(vista, "Actualizado.");
         }
     }
 
-    public void borrar() {
-        int cod = vista.pedirCodigo();
-        if (gestor.eliminarEstudiante(cod)) {
-            reporteFinal();
-            vista.mostrarMensaje("Estudiante eliminado.");
-            limpiar();
-        } else {
-            vista.mostrarMensaje("No se encontró el estudiante para eliminar.");
-        }
+    private void eliminar() {
+        int cod = vista.pedirDato("ELIMINACIÓN", "Código del estudiante a eliminar:");
+        if (cod != -1 && gestor.eliminarEstudiante(cod)) {
+            actualizarTablaPrincipal();
+            JOptionPane.showMessageDialog(vista, "Eliminado correctamente.");
+        } else if (cod != -1) JOptionPane.showMessageDialog(vista, "Código no existe.");
     }
 
-    public void reporteFinal() {
+    private void actualizarTablaPrincipal() {
         vista.modeloTabla.setRowCount(0);
-        for (Estudiante e : gestor.getListaEstudiantes()) {
+        for (Estudiante est : gestor.getListaEstudiantes()) {
             vista.modeloTabla.addRow(new Object[]{
-                e.getCodigo(), 
-                e.getNombre(), 
-                e.getNotaDesarrollo(), 
-                e.getNotaMatematica(), 
-                e.calcularDefinitiva(), 
-                e.obtenerEstadoAprobacion()
+                est.getCodigo(), est.getNombre(), est.getNotaDesarrollo(),
+                est.getNotaMatematica(), est.calcularDefinitiva(), est.obtenerEstadoAprobacion()
             });
         }
     }
 
+    // --- RECUADRO DE REPORTE FINAL ESTILIZADO ---
+    private void mostrarVentanaReporte() {
+        JDialog win = new JDialog(vista, "REPORTE GENERAL DE CALIFICACIONES", true);
+        win.setSize(800, 500);
+        win.setLocationRelativeTo(vista);
+        win.setLayout(new BorderLayout());
+
+        // Tabla del reporte
+        String[] col = {"CÓDIGO", "NOMBRE", "DEF", "ESTADO"};
+        DefaultTableModel mod = new DefaultTableModel(col, 0);
+        JTable t = new JTable(mod);
+        t.setRowHeight(30);
+        
+        for (Estudiante e : gestor.getListaEstudiantes()) {
+            mod.addRow(new Object[]{e.getCodigo(), e.getNombre(), e.calcularDefinitiva(), e.obtenerEstadoAprobacion()});
+        }
+
+        JPanel pnlHeader = new JPanel();
+        pnlHeader.setBackground(new Color(155, 89, 182));
+        pnlHeader.add(new JLabel("<html><h2 style='color:white'>REPORTE CONSOLIDADO</h2></html>"));
+
+        win.add(pnlHeader, BorderLayout.NORTH);
+        win.add(new JScrollPane(t), BorderLayout.CENTER);
+        
+        JButton btnCerrar = new JButton("CERRAR REPORTE");
+        btnCerrar.addActionListener(x -> win.dispose());
+        win.add(btnCerrar, BorderLayout.SOUTH);
+
+        win.setVisible(true);
+    }
+
     private void limpiar() {
-        vista.txtCodigo.setText("");
-        vista.txtNombre.setText("");
-        vista.txtDesarrollo.setText("");
-        vista.txtMatematica.setText("");
+        vista.txtCodigo.setText(""); vista.txtNombre.setText("");
+        vista.txtDesarrollo.setText(""); vista.txtMatematica.setText("");
     }
 }
