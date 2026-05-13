@@ -17,17 +17,15 @@ import java.util.ArrayList;
  * @author FelipeNuevo
  */
 public class GestorArchivo {
-    private static final String RUTA_ARCHIVO = "estudiantes.txt";
+    private final String RUTA_ARCHIVO = "estudiantes.txt";
     private ArrayList<Estudiante> listaEstudiantes;
 
     public GestorArchivo() {
-        listaEstudiantes = new ArrayList<>();
+        this.listaEstudiantes = new ArrayList<>();
         cargarDatos();
     }
 
-    public ArrayList<Estudiante> getListaEstudiantes() {
-        return listaEstudiantes;
-    }
+    public ArrayList<Estudiante> getListaEstudiantes() { return listaEstudiantes; }
 
     public void agregarEstudiante(Estudiante e) {
         listaEstudiantes.add(e);
@@ -36,17 +34,15 @@ public class GestorArchivo {
 
     public Estudiante buscarEstudiante(int codigo) {
         for (Estudiante e : listaEstudiantes) {
-            if (e.getCodigo() == codigo) {
-                return e;
-            }
+            if (e.getCodigo() == codigo) return e;
         }
         return null;
     }
 
     public boolean eliminarEstudiante(int codigo) {
-        Estudiante encontrado = buscarEstudiante(codigo);
-        if (encontrado != null) {
-            listaEstudiantes.remove(encontrado);
+        Estudiante e = buscarEstudiante(codigo);
+        if (e != null) {
+            listaEstudiantes.remove(e);
             guardarDatos();
             return true;
         }
@@ -59,28 +55,26 @@ public class GestorArchivo {
                 pw.println(e.toString());
             }
         } catch (IOException ex) {
-            System.err.println("Error al guardar datos: " + ex.getMessage());
+            System.err.println("Error al guardar: " + ex.getMessage());
         }
     }
 
-    private void cargarDatos() {
+    public void cargarDatos() {
         File archivo = new File(RUTA_ARCHIVO);
         if (!archivo.exists()) return;
-
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
             String linea;
+            listaEstudiantes.clear();
             while ((linea = br.readLine()) != null) {
-                String[] partes = linea.split(",");
-                if (partes.length == 4) {
-                    int cod        = Integer.parseInt(partes[0].trim());
-                    String nom     = partes[1].trim();
-                    double nDes    = Double.parseDouble(partes[2].trim());
-                    double nMat    = Double.parseDouble(partes[3].trim());
-                    listaEstudiantes.add(new Estudiante(cod, nom, nDes, nMat));
+                String[] d = linea.split(",");
+                if (d.length == 4) {
+                    listaEstudiantes.add(new Estudiante(
+                        Integer.parseInt(d[0]), d[1], 
+                        Double.parseDouble(d[2]), Double.parseDouble(d[3])));
                 }
             }
-        } catch (IOException ex) {
-            System.err.println("Error al cargar datos: " + ex.getMessage());
+        } catch (Exception ex) {
+            System.err.println("Error al cargar datos.");
         }
     }
 }

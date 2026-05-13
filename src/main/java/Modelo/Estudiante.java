@@ -19,9 +19,7 @@ public class Estudiante extends Persona implements IEvaluable {
     }
 
     @Override
-    public String getRol() {
-        return "Estudiante";
-    }
+    public String getRol() { return "Estudiante"; }
 
     @Override
     public double calcularDefinitiva() {
@@ -30,11 +28,7 @@ public class Estudiante extends Persona implements IEvaluable {
 
     @Override
     public String obtenerEstadoAprobacion() {
-        if (calcularDefinitiva() >= 3.5) {
-            return "SI APRUEBA";
-        } else {
-            return "NO APRUEBA";
-        }
+        return (this.calcularDefinitiva() >= 3.5) ? "SI APRUEBA" : "NO APRUEBA";
     }
 
     public double getNotaDesarrollo() { return notaDesarrollo; }

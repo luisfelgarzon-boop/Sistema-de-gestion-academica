@@ -7,133 +7,94 @@ package Controlador;
 import Modelo.Estudiante;
 import Modelo.GestorArchivo;
 import Vista.Vista;
-import java.util.ArrayList;
+import Modelo.*;
+import java.awt.event.*;
 
 /**
  *
  * @author FelipeNuevo
  */
-public class Controlador {
 
+public class Controlador implements ActionListener {
     private Vista vista;
     private GestorArchivo gestor;
 
     public Controlador(Vista vista, GestorArchivo gestor) {
         this.vista = vista;
         this.gestor = gestor;
+        // Listeners
+        this.vista.btnRegistrar.addActionListener(this);
+        this.vista.btnConsultar.addActionListener(this);
+        this.vista.btnActualizar.addActionListener(this);
+        this.vista.btnEliminar.addActionListener(this);
+        this.vista.btnReporte.addActionListener(this);
+        this.vista.btnLimpiar.addActionListener(this);
     }
 
-    public void iniciar() {
-        int opcion;
-        do {
-            opcion = vista.mostrarMenu();
-            switch (opcion) {
-                case 1 -> registrar();
-                case 2 -> consultar();
-                case 3 -> actualizar();
-                case 4 -> borrar();
-                case 5 -> reporteFinal();
-                case 6 -> vista.mostrarMensaje("Saliendo del sistema.");
-                default -> vista.mostrarMensaje("Opcion invalida.");
-            }
-        } while (opcion != 6);
-    }
+    public void inicio() { vista.setVisible(true); reporteFinal(); }
 
-    private void registrar() {
+    @Override
+    public void actionPerformed(ActionEvent e) {
         try {
-            int codigo = vista.pedirCodigo();
-            if (codigo <= 21000) {
-                vista.mostrarMensaje("El codigo debe ser mayor a 21000.");
-                return;
+            if (e.getSource() == vista.btnRegistrar) registrar();
+            if (e.getSource() == vista.btnConsultar) consultar();
+            if (e.getSource() == vista.btnActualizar) actualizar();
+            if (e.getSource() == vista.btnEliminar) borrar();
+            if (e.getSource() == vista.btnReporte) reporteFinal();
+            if (e.getSource() == vista.btnLimpiar) {
+                vista.txtCodigo.setText(""); vista.txtNombre.setText("");
+                vista.txtDesarrollo.setText(""); vista.txtMatematica.setText("");
             }
-            if (gestor.buscarEstudiante(codigo) != null) {
-                vista.mostrarMensaje("Ya existe un estudiante con ese codigo.");
-                return;
-            }
-            String nombre = vista.pedirNombre();
-            if (nombre == null || nombre.trim().isEmpty()) {
-                vista.mostrarMensaje("El nombre no puede estar vacio.");
-                return;
-            }
-            double nDes = vista.pedirNota("Desarrollo");
-            double nMat = vista.pedirNota("Matematica");
-            gestor.agregarEstudiante(new Estudiante(codigo, nombre.trim(), nDes, nMat));
-            vista.mostrarMensaje("Estudiante registrado exitosamente.");
-        } catch (NumberFormatException e) {
-            vista.mostrarMensaje("Ingrese valores numericos validos.");
-        }
+        } catch (Exception ex) { vista.mostrarMensaje("Error: Datos inválidos."); }
     }
 
-    private void consultar() {
-        try {
-            int codigo = vista.pedirCodigoBusqueda();
-            Estudiante e = gestor.buscarEstudiante(codigo);
-            if (e == null) {
-                vista.mostrarMensaje("No se encontro el estudiante.");
-                return;
-            }
-            vista.mostrarEstudiante(
-                e.getRol(), e.getCodigo(), e.getNombre(),
-                e.getNotaDesarrollo(), e.getNotaMatematica(),
-                e.calcularDefinitiva(), e.obtenerEstadoAprobacion()
-            );
-        } catch (NumberFormatException ex) {
-            vista.mostrarMensaje("Codigo invalido.");
-        }
+    public void registrar() {
+        int c = vista.pedirCodigo();
+        if (c <= 21000) { vista.mostrarMensaje("Código debe ser > 21000"); return; }
+        if (gestor.buscarEstudiante(c) != null) { vista.mostrarMensaje("Código ya existe."); return; }
+        double n1 = vista.pedirNota("Desarrollo");
+        double n2 = vista.pedirNota("Matematica");
+        gestor.agregarEstudiante(new Estudiante(c, vista.pedirNombre(), n1, n2));
+        reporteFinal();
+        vista.mostrarMensaje("Estudiante registrado.");
     }
 
-    private void actualizar() {
-        try {
-            int codigo = vista.pedirCodigoBusqueda();
-            Estudiante e = gestor.buscarEstudiante(codigo);
-            if (e == null) {
-                vista.mostrarMensaje("No se encontro el estudiante.");
-                return;
-            }
-            String nombre = vista.pedirNombre();
-            if (nombre == null || nombre.trim().isEmpty()) {
-                vista.mostrarMensaje("El nombre no puede estar vacio.");
-                return;
-            }
-            double nDes = vista.pedirNota("Desarrollo");
-            double nMat = vista.pedirNota("Matematica");
-            e.setNombre(nombre.trim());
-            e.setNotaDesarrollo(nDes);
-            e.setNotaMatematica(nMat);
+    public void consultar() {
+        int c = vista.pedirCodigoBusqueda();
+        Estudiante est = gestor.buscarEstudiante(c);
+        if (est != null) {
+            vista.mostrarEstudiante(est.getRol(), est.getCodigo(), est.getNombre(), 
+                    est.getNotaDesarrollo(), est.getNotaMatematica(), est.calcularDefinitiva(), est.obtenerEstadoAprobacion());
+        } else vista.mostrarMensaje("No encontrado.");
+    }
+
+    public void actualizar() {
+        int c = vista.pedirCodigo();
+        Estudiante est = gestor.buscarEstudiante(c);
+        if (est != null) {
+            est.setNombre(vista.pedirNombre());
+            est.setNotaDesarrollo(vista.pedirNota("Desarrollo"));
+            est.setNotaMatematica(vista.pedirNota("Matematica"));
             gestor.guardarDatos();
-            vista.mostrarMensaje("Estudiante actualizado exitosamente.");
-        } catch (NumberFormatException ex) {
-            vista.mostrarMensaje("Valores invalidos.");
+            reporteFinal();
+            vista.mostrarMensaje("Actualizado.");
         }
     }
 
-    private void borrar() {
-        try {
-            int codigo = vista.pedirCodigoBusqueda();
-            boolean eliminado = gestor.eliminarEstudiante(codigo);
-            vista.mostrarMensaje(eliminado
-                ? "Estudiante eliminado exitosamente."
-                : "No se encontro el estudiante.");
-        } catch (NumberFormatException ex) {
-            vista.mostrarMensaje("Codigo invalido.");
+    public void borrar() {
+        if (gestor.eliminarEstudiante(vista.pedirCodigo())) {
+            reporteFinal();
+            vista.mostrarMensaje("Eliminado.");
         }
     }
 
-    private void reporteFinal() {
-        if (gestor.getListaEstudiantes().isEmpty()) {
-            vista.mostrarMensaje("No hay estudiantes registrados.");
-            return;
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%-10s %-20s %-12s %-12s %-12s %-12s\n",
-            "Codigo", "Nombre", "Desarrollo", "Matematica", "Definitiva", "Estado"));
-        sb.append("-".repeat(80)).append("\n");
+    public void reporteFinal() {
+        vista.modeloTabla.setRowCount(0);
         for (Estudiante e : gestor.getListaEstudiantes()) {
-            sb.append(String.format("%-10d %-20s %-12.2f %-12.2f %-12.2f %-12s\n",
-                e.getCodigo(), e.getNombre(),
-                e.getNotaDesarrollo(), e.getNotaMatematica(),
-                e.calcularDefinitiva(), e.obtenerEstadoAprobacion()));
+            vista.modeloTabla.addRow(new Object[]{
+                e.getCodigo(), e.getNombre(), e.getNotaDesarrollo(), 
+                e.getNotaMatematica(), String.format("%.2f", e.calcularDefinitiva()), e.obtenerEstadoAprobacion()
+            });
         }
-        vista.mostrarMensaje(sb.toString());
     }
 }
