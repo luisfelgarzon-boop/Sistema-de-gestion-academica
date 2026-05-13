@@ -23,14 +23,18 @@ public class Estudiante extends Persona implements IEvaluable {
 
     @Override
     public double calcularDefinitiva() {
-        return (notaDesarrollo * 0.6) + (notaMatematica * 0.4);
+        // Redondeo a 2 decimales para evitar errores de precisión
+        double def = (this.notaDesarrollo * 0.6) + (this.notaMatematica * 0.4);
+        return Math.round(def * 100.0) / 100.0;
     }
 
     @Override
     public String obtenerEstadoAprobacion() {
+        // Restricción: >= 3.5 APRUEBA
         return (this.calcularDefinitiva() >= 3.5) ? "SI APRUEBA" : "NO APRUEBA";
     }
 
+    // Getters y Setters necesarios para el Controlador
     public double getNotaDesarrollo() { return notaDesarrollo; }
     public void setNotaDesarrollo(double notaDesarrollo) { this.notaDesarrollo = notaDesarrollo; }
     public double getNotaMatematica() { return notaMatematica; }

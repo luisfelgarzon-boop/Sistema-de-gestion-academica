@@ -14,7 +14,6 @@ import java.awt.event.*;
  *
  * @author FelipeNuevo
  */
-
 public class Controlador implements ActionListener {
     private Vista vista;
     private GestorArchivo gestor;
@@ -22,7 +21,7 @@ public class Controlador implements ActionListener {
     public Controlador(Vista vista, GestorArchivo gestor) {
         this.vista = vista;
         this.gestor = gestor;
-        // Listeners
+        // Vincular botones
         this.vista.btnRegistrar.addActionListener(this);
         this.vista.btnConsultar.addActionListener(this);
         this.vista.btnActualizar.addActionListener(this);
@@ -31,7 +30,10 @@ public class Controlador implements ActionListener {
         this.vista.btnLimpiar.addActionListener(this);
     }
 
-    public void inicio() { vista.setVisible(true); reporteFinal(); }
+    public void inicio() {
+        vista.setVisible(true);
+        reporteFinal();
+    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -41,50 +43,97 @@ public class Controlador implements ActionListener {
             if (e.getSource() == vista.btnActualizar) actualizar();
             if (e.getSource() == vista.btnEliminar) borrar();
             if (e.getSource() == vista.btnReporte) reporteFinal();
-            if (e.getSource() == vista.btnLimpiar) {
-                vista.txtCodigo.setText(""); vista.txtNombre.setText("");
-                vista.txtDesarrollo.setText(""); vista.txtMatematica.setText("");
-            }
-        } catch (Exception ex) { vista.mostrarMensaje("Error: Datos inválidos."); }
+            if (e.getSource() == vista.btnLimpiar) limpiar();
+        } catch (NumberFormatException ex) {
+            vista.mostrarMensaje("ERROR: Ingrese solo números en Código y Notas.");
+        } catch (Exception ex) {
+            vista.mostrarMensaje("Error inesperado: " + ex.getMessage());
+        }
     }
 
     public void registrar() {
-        int c = vista.pedirCodigo();
-        if (c <= 21000) { vista.mostrarMensaje("Código debe ser > 21000"); return; }
-        if (gestor.buscarEstudiante(c) != null) { vista.mostrarMensaje("Código ya existe."); return; }
-        double n1 = vista.pedirNota("Desarrollo");
-        double n2 = vista.pedirNota("Matematica");
-        gestor.agregarEstudiante(new Estudiante(c, vista.pedirNombre(), n1, n2));
+        // RESTRICCIÓN 1: Código > 21000
+        int cod = vista.pedirCodigo();
+        if (cod <= 21000) {
+            vista.mostrarMensaje("RESTRICCIÓN: El código debe ser superior a 21000.");
+            return;
+        }
+
+        // Validación: No duplicados
+        if (gestor.buscarEstudiante(cod) != null) {
+            vista.mostrarMensaje("El estudiante con código " + cod + " ya existe.");
+            return;
+        }
+
+        String nom = vista.pedirNombre();
+        if (nom.isEmpty()) {
+            vista.mostrarMensaje("El nombre no puede estar vacío.");
+            return;
+        }
+
+        // RESTRICCIÓN 2: Notas entre 0 y 5
+        double nDes = vista.pedirNota("Desarrollo");
+        double nMat = vista.pedirNota("Matematica");
+
+        if (nDes < 0 || nDes > 5 || nMat < 0 || nMat > 5) {
+            vista.mostrarMensaje("RESTRICCIÓN: Las notas deben estar entre 0.0 y 5.0");
+            return;
+        }
+
+        gestor.agregarEstudiante(new Estudiante(cod, nom, nDes, nMat));
         reporteFinal();
-        vista.mostrarMensaje("Estudiante registrado.");
+        vista.mostrarMensaje("Estudiante registrado exitosamente.");
+        limpiar();
     }
 
     public void consultar() {
-        int c = vista.pedirCodigoBusqueda();
-        Estudiante est = gestor.buscarEstudiante(c);
+        int cod = vista.pedirCodigoBusqueda();
+        if (cod == -1) return;
+
+        Estudiante est = gestor.buscarEstudiante(cod);
         if (est != null) {
-            vista.mostrarEstudiante(est.getRol(), est.getCodigo(), est.getNombre(), 
-                    est.getNotaDesarrollo(), est.getNotaMatematica(), est.calcularDefinitiva(), est.obtenerEstadoAprobacion());
-        } else vista.mostrarMensaje("No encontrado.");
+            vista.mostrarEstudiante(
+                est.getRol(), est.getCodigo(), est.getNombre(),
+                est.getNotaDesarrollo(), est.getNotaMatematica(),
+                est.calcularDefinitiva(), est.obtenerEstadoAprobacion()
+            );
+        } else {
+            vista.mostrarMensaje("Estudiante no encontrado.");
+        }
     }
 
     public void actualizar() {
-        int c = vista.pedirCodigo();
-        Estudiante est = gestor.buscarEstudiante(c);
+        int cod = vista.pedirCodigo();
+        Estudiante est = gestor.buscarEstudiante(cod);
+        
         if (est != null) {
+            double nDes = vista.pedirNota("Desarrollo");
+            double nMat = vista.pedirNota("Matematica");
+            
+            if (nDes < 0 || nDes > 5 || nMat < 0 || nMat > 5) {
+                vista.mostrarMensaje("Notas inválidas (0-5).");
+                return;
+            }
+            
             est.setNombre(vista.pedirNombre());
-            est.setNotaDesarrollo(vista.pedirNota("Desarrollo"));
-            est.setNotaMatematica(vista.pedirNota("Matematica"));
+            est.setNotaDesarrollo(nDes);
+            est.setNotaMatematica(nMat);
             gestor.guardarDatos();
             reporteFinal();
-            vista.mostrarMensaje("Actualizado.");
+            vista.mostrarMensaje("Datos actualizados.");
+        } else {
+            vista.mostrarMensaje("Para actualizar, primero ingrese un código existente en el campo Código.");
         }
     }
 
     public void borrar() {
-        if (gestor.eliminarEstudiante(vista.pedirCodigo())) {
+        int cod = vista.pedirCodigo();
+        if (gestor.eliminarEstudiante(cod)) {
             reporteFinal();
-            vista.mostrarMensaje("Eliminado.");
+            vista.mostrarMensaje("Estudiante eliminado.");
+            limpiar();
+        } else {
+            vista.mostrarMensaje("No se encontró el estudiante para eliminar.");
         }
     }
 
@@ -92,9 +141,20 @@ public class Controlador implements ActionListener {
         vista.modeloTabla.setRowCount(0);
         for (Estudiante e : gestor.getListaEstudiantes()) {
             vista.modeloTabla.addRow(new Object[]{
-                e.getCodigo(), e.getNombre(), e.getNotaDesarrollo(), 
-                e.getNotaMatematica(), String.format("%.2f", e.calcularDefinitiva()), e.obtenerEstadoAprobacion()
+                e.getCodigo(), 
+                e.getNombre(), 
+                e.getNotaDesarrollo(), 
+                e.getNotaMatematica(), 
+                e.calcularDefinitiva(), 
+                e.obtenerEstadoAprobacion()
             });
         }
+    }
+
+    private void limpiar() {
+        vista.txtCodigo.setText("");
+        vista.txtNombre.setText("");
+        vista.txtDesarrollo.setText("");
+        vista.txtMatematica.setText("");
     }
 }
