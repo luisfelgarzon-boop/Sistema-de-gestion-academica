@@ -8,7 +8,7 @@ package Modelo;
  *
  * @author FelipeNuevo
  */
-public interface Evaluable {
+public interface IEvaluable {
     double calcularDefinitiva();
     String obtenerEstadoAprobacion();
 }

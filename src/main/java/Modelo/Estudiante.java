@@ -8,7 +8,7 @@ package Modelo;
  *
  * @author FelipeNuevo
  */
-public class Estudiante extends Persona implements Evaluable {
+public class Estudiante extends Persona implements IEvaluable {
     private double notaDesarrollo;
     private double notaMatematica;
 
